@@ -36,7 +36,7 @@ RECURSOS
 - Perfis gerente/caixa; apenas gerente vê a aba Funcionários.
 - Recibo PDF de cada venda.
 - Scanner USB: a maioria funciona como teclado; clique no campo Código e leia o produto.
-- Atalhos: F2 focar código, F4 pagamento, F5 próximo cliente; 1–4 selecionam pagamento quando não se está digitando nos campos do caixa.
+- Atalhos: F1 cancela toda a compra após confirmação; F2 remove o produto selecionado; F3 foca o campo do código; F4 abre o pagamento; F5 inicia o próximo cliente; Esc volta da tela de pagamento à compra sem finalizá-la; 1–4 selecionam pagamento quando não se está digitando nos campos do caixa.
 
 GERAR EXE
 Dentro da pasta do projeto, execute:

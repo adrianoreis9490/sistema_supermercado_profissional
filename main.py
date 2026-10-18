@@ -87,7 +87,9 @@ class Aplicativo:
             self.aba_funcionarios = ttk.Frame(self.abas)
             self.abas.add(self.aba_funcionarios, text="Funcionários")
             self._montar_funcionarios()
-        self.janela.bind("<F2>", lambda e: self.codigo.focus_set())
+        self.janela.bind("<F1>", lambda e: self.cancelar_compra())
+        self.janela.bind("<F2>", lambda e: self.remover_item())
+        self.janela.bind("<F3>", lambda e: self.codigo.focus_set())
         self.janela.bind("<F4>", lambda e: self.abrir_pagamento())
         self.janela.bind("<F5>", lambda e: self.proximo_cliente())
         self.janela.bind("<Key>", self._atalhos)
@@ -140,8 +142,8 @@ class Aplicativo:
         self.tabela_carrinho.pack(fill="both", expand=True, pady=12)
         linha = tk.Frame(esquerda, bg="white")
         linha.pack(fill="x")
-        self._botao(linha, "Remover item selecionado", self.remover_item, "#B83227").pack(side="left")
-        self._botao(linha, "Limpar carrinho", self.limpar_carrinho, "#627D98").pack(side="right")
+        self._botao(linha, "Remover item selecionado (F2)", self.remover_item, "#B83227").pack(side="left")
+        self._botao(linha, "Cancelar compra (F1)", self.cancelar_compra, "#627D98").pack(side="right")
 
         tk.Label(direita, text="TOTAL DA COMPRA", font=("Segoe UI", 12, "bold"),
                  bg="#D9EAF7", fg="#102A43").pack(anchor="w")
@@ -157,7 +159,7 @@ class Aplicativo:
                            font=("Segoe UI", 12), bg="#D9EAF7", activebackground="#D9EAF7").pack(anchor="w", pady=3)
         self._botao(direita, "PAGAR  (F4)", self.abrir_pagamento, "#1565C0").pack(fill="x", pady=(20, 8))
         self._botao(direita, "PRÓXIMO CLIENTE  (F5)", self.proximo_cliente, "#B7791F").pack(fill="x")
-        tk.Label(direita, text="Scanner USB: conecte e leia o código no campo Código.\nF2: focar código • F4: pagar • F5: próximo cliente",
+        tk.Label(direita, text="Scanner USB: conecte e leia o código no campo Código.\nF1: cancelar compra • F2: remover item • F3: focar código • F4: pagar • F5: próximo cliente",
                  bg="#D9EAF7", fg="#334E68", justify="left", wraplength=280).pack(anchor="w", pady=18)
         self.codigo.bind("<Return>", lambda e: self.adicionar_produto())
         self.quantidade.bind("<Return>", lambda e: self.adicionar_produto())
@@ -213,9 +215,25 @@ class Aplicativo:
         self.atualizar_carrinho()
 
     def limpar_carrinho(self):
-        if self.carrinho and messagebox.askyesno("Limpar", "Remover todos os itens do carrinho?"):
-            self.carrinho.clear()
-            self.atualizar_carrinho()
+        self.cancelar_compra()
+
+    def cancelar_compra(self, janela=None):
+        if not self.carrinho:
+            return
+        if not messagebox.askyesno(
+            "Cancelar compra",
+            "Deseja cancelar a compra e remover todos os produtos do carrinho?",
+            parent=janela or self.janela,
+        ):
+            return
+        self.carrinho.clear()
+        self.atualizar_carrinho()
+        self.codigo.delete(0, tk.END)
+        self.quantidade.delete(0, tk.END)
+        self.quantidade.insert(0, "1")
+        if janela is not None and janela.winfo_exists():
+            janela.destroy()
+        self.janela.after_idle(self.codigo.focus_set)
 
     def abrir_pagamento(self):
         total = self.total()
@@ -228,10 +246,20 @@ class Aplicativo:
         pag.transient(self.janela)
         pag.grab_set()
         pag.configure(bg="#F0F4F8")
+        def voltar_para_compra(event=None):
+            pag.destroy()
+            self.janela.after_idle(self.codigo.focus_set)
+            return "break"
+
+        pag.bind("<Escape>", voltar_para_compra)
+        pag.bind("<F1>", lambda event: self.cancelar_compra(pag))
+        pag.protocol("WM_DELETE_WINDOW", voltar_para_compra)
         tk.Label(pag, text="CONFIRMAR PAGAMENTO", font=("Segoe UI", 16, "bold"),
                  bg="#F0F4F8", fg="#102A43").pack(pady=15)
         tk.Label(pag, text=f"Valor da compra: {dinheiro(total)}", font=("Segoe UI", 14, "bold"),
                  bg="#F0F4F8").pack(pady=5)
+        tk.Label(pag, text="Esc: voltar à compra sem finalizar", bg="#F0F4F8",
+                 fg="#486581", font=("Segoe UI", 9)).pack(side="bottom", pady=10)
         metodo = self.forma.get()
         if metodo == "Dinheiro":
             tk.Label(pag, text="Valor recebido (R$)", bg="#F0F4F8").pack(pady=(12, 2))
@@ -267,6 +295,7 @@ class Aplicativo:
                 pag.destroy()
             self._botao(pag, "CONFIRMAR  (Enter)", confirmar, "#1565C0").pack(pady=8)
             pag.bind("<Return>", confirmar)
+            pag.focus_set()
 
     def finalizar_venda(self, metodo, recebido, troco):
         try:
